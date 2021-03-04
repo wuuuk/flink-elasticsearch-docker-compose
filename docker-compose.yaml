@@ -1,13 +1,13 @@
 version: "2"
 services:
-# zookeeper
+
   zookeeper:
     image: debezium/zookeeper:1.2
     ports:
       - "2181:2181"
     networks:
       - elasticsearchNet
-# kafka
+
   kafka:
     image: debezium/kafka:1.2
     ports:
@@ -18,7 +18,7 @@ services:
       - ZOOKEEPER_CONNECT=zookeeper:2181
     networks:
       - elasticsearchNet
-# mongodb
+
   mongodb:
     image: debezium/example-mongodb:1.2
     hostname: mongodb
@@ -29,21 +29,22 @@ services:
       - MONGODB_PASSWORD=dbz
     networks:
       - elasticsearchNet
-# mysql
+
   mysql:
     image: debezium/example-mysql:1.2
     ports:
       - 3306:3306
     environment:
-      - MYSQL_ROOT_PASSWORD=debezium
+      - MYSQL_ROOT_PASSWORD=root
       - MYSQL_USER=mysqluser
       - MYSQL_PASSWORD=mysqlpw
       - TZ=Asia/Shanghai
     volumes:
-      - /Users/mac/workspace/etl/mysql:/var/lib/mysql
+      - /Users/lintao/workspaces/etl/data/mysql:/var/lib/mysql
+      #- /Users/lintao/workspaces/etl/docker-config/mysql:/etc/mysql
     networks:
       - elasticsearchNet
-# 连接器
+
   connect:
     image: debezium/connect:1.2
     ports:
@@ -59,7 +60,7 @@ services:
       - STATUS_STORAGE_TOPIC=my_connect_statuses
     networks:
       - elasticsearchNet
-# flink sql
+
   sql-client:
     build: ./client-image
     image: demo/debezium-flink-sql
@@ -74,9 +75,10 @@ services:
       ES_HOST: elasticsearch
     networks:
       - elasticsearchNet
-# flink作业管理器
+
   jobmanager:
-    image: flink:1.11.1-scala_2.11
+    build: ./flink-image
+    image: demo/flink
     ports:
       - "8081:8081"
     command: jobmanager
@@ -84,9 +86,9 @@ services:
       - JOB_MANAGER_RPC_ADDRESS=jobmanager
     networks:
       - elasticsearchNet
-# flink任务管理器
+
   taskmanager:
-    image: flink:1.11.1-scala_2.11
+    image: demo/flink
     depends_on:
       - jobmanager
     command: taskmanager
@@ -94,11 +96,13 @@ services:
       - JOB_MANAGER_RPC_ADDRESS=jobmanager
     networks:
       - elasticsearchNet
-# elasticsearch 7.7目前最新
+
   elasticsearch:
+    # image: elasticsearch:7.7.0
     image: docker.elastic.co/elasticsearch/elasticsearch:7.7.0
     environment:
       - cluster.name=docker-cluster
+      # - bootstrap.memory_lock=true
       - "ES_JAVA_OPTS=-Xms2048m -Xmx2048m"
       - discovery.type=single-node
     ports:
@@ -111,24 +115,22 @@ services:
       nofile:
         soft: 65536
         hard: 65536
-    networks:
-      - elasticsearchNet
-    deploy: # 设置elasticsearch运行配置，如果小于此配置可能会宕机
+    deploy:
       resources:
         limits:
-           cpus: '2'
            memory: 2G
         reservations:
-           cpus: '0.5'
            memory: 200M
-# kibana: elasticsearch可视化工具
+    networks:
+      - elasticsearchNet
+        
   kibana:
     image: docker.elastic.co/kibana/kibana:7.7.0
     ports:
       - "5601:5601"
     networks:
       - elasticsearchNet
-# 设置网络
+
 networks:
   elasticsearchNet:
     driver: bridge
