@@ -4,14 +4,14 @@ services:
   zookeeper:
     image: debezium/zookeeper:1.2
     ports:
-      - "2181:2181"
+      - ${zookeeper_port}:2181
     networks:
       - elasticsearchNet
 
   kafka:
     image: debezium/kafka:1.2
     ports:
-      - "9092:9092"
+      - ${kafka_port}:9092
     depends_on:
       - zookeeper
     environment:
@@ -23,7 +23,7 @@ services:
     image: debezium/example-mongodb:1.2
     hostname: mongodb
     ports:
-      - 27017:27017
+      - ${mongo_port}:27017
     environment:
       - MONGODB_USER=debezium
       - MONGODB_PASSWORD=dbz
@@ -33,15 +33,14 @@ services:
   mysql:
     image: debezium/example-mysql:1.2
     ports:
-      - 3306:3306
+      - ${mysql_port}:3306
     environment:
       - MYSQL_ROOT_PASSWORD=root
       - MYSQL_USER=mysqluser
       - MYSQL_PASSWORD=mysqlpw
       - TZ=Asia/Shanghai
     volumes:
-      - /Users/lintao/workspaces/etl/data/mysql:/var/lib/mysql
-      #- /Users/lintao/workspaces/etl/docker-config/mysql:/etc/mysql
+      - ${data_path}/mysql_data:/var/lib/mysql  # mysql数据文件映射到家目录的workspaces/docker_data/mysql_data
     networks:
       - elasticsearchNet
 
@@ -61,9 +60,30 @@ services:
     networks:
       - elasticsearchNet
 
+  jobmanager:
+    build: ./flink-image
+    image: wuuuk/flink  # build后镜像名，默认标签latest
+    ports:
+      - ${flink_port}:8081
+    command: jobmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=jobmanager
+    networks:
+      - elasticsearchNet
+
+  taskmanager:
+    image: wuuuk/flink
+    depends_on:
+      - jobmanager
+    command: taskmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=jobmanager
+    networks:
+      - elasticsearchNet
+
   sql-client:
     build: ./client-image
-    image: demo/debezium-flink-sql
+    image: wuuuk/sql-client
     depends_on:
       - kafka
       - jobmanager
@@ -76,38 +96,18 @@ services:
     networks:
       - elasticsearchNet
 
-  jobmanager:
-    build: ./flink-image
-    image: demo/flink
-    ports:
-      - "8081:8081"
-    command: jobmanager
-    environment:
-      - JOB_MANAGER_RPC_ADDRESS=jobmanager
-    networks:
-      - elasticsearchNet
-
-  taskmanager:
-    image: demo/flink
-    depends_on:
-      - jobmanager
-    command: taskmanager
-    environment:
-      - JOB_MANAGER_RPC_ADDRESS=jobmanager
-    networks:
-      - elasticsearchNet
-
   elasticsearch:
-    # image: elasticsearch:7.7.0
     image: docker.elastic.co/elasticsearch/elasticsearch:7.7.0
     environment:
       - cluster.name=docker-cluster
-      # - bootstrap.memory_lock=true
+      # - bootstrap.memory_lock=true  # *******锁定物理内存地址，此处设置会导致启动失败。原因是分配的内存不够*******
       - "ES_JAVA_OPTS=-Xms2048m -Xmx2048m"
       - discovery.type=single-node
     ports:
-      - "9200:9200"
-      - "9300:9300"
+      - ${elasticsearch_port}:9200
+      - 9300:9300
+    volumes:
+      - ${data_path}/es_data:/usr/share/elasticsearch/data  # es索引 数据文件映射到家目录的workspaces/docker_data/es_data
     ulimits:
       memlock:
         soft: -1
@@ -123,11 +123,12 @@ services:
            memory: 200M
     networks:
       - elasticsearchNet
-        
+    tty: true
+
   kibana:
     image: docker.elastic.co/kibana/kibana:7.7.0
     ports:
-      - "5601:5601"
+      - ${kibana_port}:5601
     networks:
       - elasticsearchNet
 

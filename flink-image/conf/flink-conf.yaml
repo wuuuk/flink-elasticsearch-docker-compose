@@ -1,0 +1,10 @@
+jobmanager.rpc.address: jobmanager  # JobManager 的IP地址
+jobmanager.rpc.port: 6123  # JobManager的端口号
+jobmanager.heap.size: 2048m  # JobManager JVM heap的内存大小
+taskmanager.heap.size: 4096m  # TaskManager JVM Heap的内存大小
+taskmanager.numberOfTaskSlots: 8  # 每个TaskManager 提供的任务Slots数量大小
+state.checkpoints.num-retained: 5  # 用于指定保留的已完成的checkpoints个数
+parallelism.default: 8  # 程序默认并行计算的个数
+task.cancellation.timeout: 0
+# 用于存储和检查点状态
+# state.backend: filesystem
