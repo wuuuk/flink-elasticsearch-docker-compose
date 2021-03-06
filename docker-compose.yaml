@@ -68,6 +68,8 @@ services:
     command: jobmanager
     environment:
       - JOB_MANAGER_RPC_ADDRESS=jobmanager
+    volumes:
+      - ${data_path}/checkpoint:/opt/flink/checkpoint  # checkpoint数据文件映射到家目录workspaces/docker_data/checkpoint, 同时代码指定checkpoint file uri为/opt/flink/checkpoint/xx
     networks:
       - elasticsearchNet
 
@@ -78,6 +80,8 @@ services:
     command: taskmanager
     environment:
       - JOB_MANAGER_RPC_ADDRESS=jobmanager
+    volumes:
+      - ${data_path}/checkpoint:/opt/flink/checkpoint  # checkpoint数据文件映射到家目录workspaces/docker_data/checkpoint, 同时代码指定checkpoint file uri为/opt/flink/checkpoint/xx
     networks:
       - elasticsearchNet
 
